@@ -1,0 +1,125 @@
+################### Settings ======================
+#debug.config false
+MAX_RANGE 300
+
+#simulation.cycles 100
+OBERVERS_CYCLE 50
+PROTOCOL_CYCLE 20
+CONTROL_CYCLE 50
+battery_failure_probability 50
+network.size 35
+map_size 1000
+random.seed 1234567890
+
+simulation.endtime 100000
+simulation.logtime 50
+
+
+################### initialization ======================
+
+init.0 example.update.initialisation.EnergyInitializer
+init.0.protocol energy
+
+init.1 example.update.initialisation.InetInitializer
+init.1.protocol localisation
+init.1.max_node_speed 60
+init.1.min_node_speed 10
+#init.1.nodes_location_file nodes_position.csv
+
+init.2 example.update.initialisation.GossipInitializer
+init.2.gossip_protocol gossip
+
+
+################### protocols ===========================
+
+protocol.link IdleProtocol
+
+protocol.energy example.update.constraints.energy.EnergyProxy
+
+protocol.localisation example.update.constraints.NodeCoordinates
+
+protocol.neighbor example.update.NeighborhoodMaintainer
+protocol.neighbor.coord_protocol localisation
+protocol.neighbor.energy_protocol energy
+protocol.neighbor.max_distance MAX_RANGE
+protocol.neighbor.transport tr
+protocol.neighbor.step PROTOCOL_CYCLE
+
+init.sch1 CDScheduler
+init.sch1.protocol neighbor
+
+protocol.db example.update.SoftwareDB
+
+protocol.gossip example.update.Gossiper
+protocol.gossip.neighbors_protocol neighbor
+protocol.gossip.supervisor_protocol supervisor
+protocol.gossip.transport tr
+
+protocol.tr UniformRandomTransport
+protocol.tr.mindelay 0
+protocol.tr.maxdelay 1
+
+init.sch2 CDScheduler
+init.sch2.protocol supervisor
+
+protocol.supervisor example.update.Scheduler
+protocol.supervisor.database_protocol db
+protocol.supervisor.gossip_protocol gossip
+protocol.supervisor.bandwidth 1
+protocol.supervisor.disk_space 1000
+protocol.supervisor.transport tr
+protocol.supervisor.step PROTOCOL_CYCLE
+
+################ controls ==============================
+
+control.nodemover example.update.control.NodeMover
+control.nodemover.coord_protocol localisation
+control.nodemover.map_size map_size
+control.nodemover.step CONTROL_CYCLE
+#control.nodemover.data_file nodes_position.csv
+
+control.switcher example.update.control.EnergySwitcher
+control.switcher.energy_protocol energy
+control.switcher.energy_switching_probability battery_failure_probability
+control.switcher.step CONTROL_CYCLE*3
+
+
+################ Observers ==============================
+
+#control.coordObserver example.update.observation.InetObserver
+#control.coordObserver.coord_protocol localisation
+#control.coordObserver.step OBERVERS_CYCLE
+
+#control.neighobserver example.update.observation.NeighborsObservers
+#control.neighobserver.neigbors_protocol neighbor
+#control.neighobserver.step OBERVERS_CYCLE
+
+#control.energyobserver example.update.observation.SimpleEnergyObserver
+#control.energyobserver.energy_protocol energy
+#control.energyobserver.step OBERVERS_CYCLE
+
+control.dbObserver example.update.observation.SoftwareDBObserver
+control.dbObserver.database_protocol db
+control.dbObserver.step OBERVERS_CYCLE*10
+
+control.schedulerCounter example.update.observation.SchedulerJobsCounter
+control.schedulerCounter.protocol supervisor
+control.schedulerCounter.step OBERVERS_CYCLE
+
+################ Order & timings ==============================
+order.protocol link,tr,energy,localisation,db,neighbor,gossip,supervisor
+#order.control coordObserver,energyobserver,neighobserver,dbObserver,nodemover,switcher
+order.control schedulerCounter,dbObserver,nodemover,switcher
+
+# Observers should be run once more at the end
+#control.neighobserver.FINAL true
+#control.energyobserver.FINAL true
+#control.coordObserver.FINAL true
+#control.dbObserver.FINAL true
+control.schedulerCounter.FINAL true
+
+# Observers should not run at first cycle (protocols have not been run yet)
+#control.neighobserver.from 2
+#control.energyobserver.from 2
+#control.coordObserver.from 2
+control.dbObserver.from 2
