@@ -1,4 +1,5 @@
 #################### Settings ======================
+# hier ist ein kommentar
 #debug.config
 MAX_RANGE 400
 
